@@ -5,7 +5,8 @@ import time
 from ultralytics import YOLO
 import threading
 import torch
-import nanocamera as nano
+
+
 def generate_colors(num_classes):
     return [tuple(np.random.randint(0, 255, 3).tolist()) for _ in range(num_classes)]
 
@@ -51,10 +52,10 @@ def detect_objects_from_webcam():
     yolo_model = YOLO('best.pt')
     yolo_model.to('cuda' if torch.cuda.is_available() else 'cpu')
 
-    # video_capture = cv2.VideoCapture(0)
-    # video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    # video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-    video_capture = nano.Camera(flip=2, width=640, height=480, fps=30)
+    video_capture = cv2.VideoCapture(0)
+    video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+
     prev_time = 0
     frame_skip = 2
     frame_queue = queue.Queue(maxsize=1)
@@ -74,6 +75,8 @@ def detect_objects_from_webcam():
             continue
 
         frame = frame_queue.get()
+
+        start_frame = time.time()
 
         frame = process_frame(yolo_model, frame, colors, process_times)
 
