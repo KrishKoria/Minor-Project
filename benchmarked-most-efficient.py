@@ -51,6 +51,8 @@ def process_frame(yolo_model, frame, colors, process_times):
 def detect_objects_from_webcam():
     yolo_model = YOLO('best.pt')
     yolo_model.to('cuda' if torch.cuda.is_available() else 'cpu')
+    yolo_model.export(format="ncnn")
+    yolo_model = YOLO('best_ncnn_model')
 
     video_capture = cv2.VideoCapture(0)
     video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
