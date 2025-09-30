@@ -48,11 +48,11 @@ def process_frame(yolo_model, frame, colors, process_times):
     return frame
 
 
-def detect_objects_from_webcam():
+def detect_weapons_from_webcam():
     yolo_model = YOLO('best.pt')
     yolo_model.to('cuda' if torch.cuda.is_available() else 'cpu')
-    yolo_model.export(format="ncnn")
-    yolo_model = YOLO('best_ncnn_model')
+    # yolo_model.export(format="ncnn")
+    # yolo_model = YOLO('best_ncnn_model')
 
     video_capture = cv2.VideoCapture(0)
     video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
@@ -108,4 +108,4 @@ def detect_objects_from_webcam():
 
 
 if __name__ == "__main__":
-    detect_objects_from_webcam()
+    detect_weapons_from_webcam()

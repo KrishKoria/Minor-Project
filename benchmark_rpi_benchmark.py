@@ -5,19 +5,24 @@ import time
 from ultralytics import YOLO
 import threading
 import torch
-from picamera2 import Picamera2
-from picamera2.encoders import H264Encoder
-from picamera2.outputs import FileOutput
 
 def generate_colors(num_classes):
-    return [tuple(np.random.randint(0, 255, 3).tolist()) for _ in range(num_classes)]
+    colors = []
+    for _ in range(num_classes):
+        color = np.random.randint(0, 255, 3)
+        colors.append((int(color[0]), int(color[1]), int(color[2])))
+    return colors
 
-def capture_frames(picam2, frame_queue, frame_skip, capture_times):
+def capture_frames(cap, frame_queue, frame_skip, capture_times):
     frame_count = 0
     while True:
         start_capture = time.time()
-        frame = picam2.capture_array()
+        ret, frame = cap.read()
         capture_times.append(time.time() - start_capture)
+        
+        if not ret:
+            print("Failed to capture frame from webcam")
+            break
 
         frame_count += 1
         if frame_count % frame_skip == 0 and not frame_queue.full():
@@ -45,15 +50,21 @@ def process_frame(yolo_model, frame, colors, process_times):
 
     return frame
 
-def detect_objects_from_picamera():
+def detect_objects_from_webcam():
     yolo_model = YOLO('best.pt')
     yolo_model.to('cuda' if torch.cuda.is_available() else 'cpu')
     yolo_model.export(format="ncnn")
     yolo_model = YOLO('best_ncnn_model')
 
-    picam2 = Picamera2()
-    picam2.configure(picam2.create_preview_configuration(main={"format": 'XRGB8888', "size": (640, 480)}))
-    picam2.start()
+    # Initialize webcam
+    cap = cv2.VideoCapture(0)  # 0 for default webcam
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    cap.set(cv2.CAP_PROP_FPS, 30)
+    
+    if not cap.isOpened():
+        print("Error: Could not open webcam")
+        return
 
     prev_time = 0
     frame_skip = 2
@@ -63,7 +74,7 @@ def detect_objects_from_picamera():
     process_times = []  # To store processing times for benchmarking
     fps_values = []     # To store FPS values
 
-    capture_thread = threading.Thread(target=capture_frames, args=(picam2, frame_queue, frame_skip, capture_times))
+    capture_thread = threading.Thread(target=capture_frames, args=(cap, frame_queue, frame_skip, capture_times))
     capture_thread.daemon = True
     capture_thread.start()
 
@@ -85,12 +96,12 @@ def detect_objects_from_picamera():
         fps_values.append(fps)
         cv2.putText(frame, f"FPS: {fps:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
-        cv2.imshow("Raspberry Pi Object Detection", frame)
+        cv2.imshow("Webcam Object Detection", frame)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
-    picam2.stop()
+    cap.release()
     cv2.destroyAllWindows()
 
     # Calculate benchmarking stats
@@ -104,4 +115,4 @@ def detect_objects_from_picamera():
     print(f"Average FPS: {avg_fps:.2f}")
 
 if __name__ == "__main__":
-    detect_objects_from_picamera()
+    detect_objects_from_webcam()
