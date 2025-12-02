@@ -32,11 +32,9 @@ from ultralytics import YOLO
 # Detection Result Dataclass
 # =============================================================================
 
-@dataclass
+@dataclass(slots=True)
 class Detection:
     """Represents a single detection result with optimized memory usage."""
-    __slots__ = ('x1', 'y1', 'x2', 'y2', 'class_id', 'class_name', 'confidence', 'color')
-
     x1: int
     y1: int
     x2: int
@@ -59,16 +57,16 @@ class PerformanceTracker:
     """
 
     max_samples: int = 1000
-    capture_times: deque = field(default_factory=lambda: deque(maxlen=1000))
-    process_times: deque = field(default_factory=lambda: deque(maxlen=1000))
-    fps_values: deque = field(default_factory=lambda: deque(maxlen=1000))
+    capture_times: deque = field(default_factory=deque)
+    process_times: deque = field(default_factory=deque)
+    fps_values: deque = field(default_factory=deque)
     total_frames: int = 0
     start_time: float = field(default_factory=time.time)
     _smoothed_fps: float = 0.0
     _fps_update_interval: int = 5  # Update displayed FPS every N frames
 
     def __post_init__(self):
-        """Reinitialize deques with proper maxlen after dataclass init."""
+        """Initialize deques with proper maxlen based on max_samples."""
         self.capture_times = deque(maxlen=self.max_samples)
         self.process_times = deque(maxlen=self.max_samples)
         self.fps_values = deque(maxlen=self.max_samples)
@@ -197,8 +195,10 @@ class AsyncFrameCapture:
             return cv2.CAP_DSHOW  # DirectShow on Windows
         elif sys.platform.startswith('linux'):
             return cv2.CAP_V4L2  # V4L2 on Linux
+        elif sys.platform == 'darwin':
+            return cv2.CAP_AVFOUNDATION  # AVFoundation on macOS
         else:
-            return cv2.CAP_ANY  # Default backend for macOS and others
+            return cv2.CAP_ANY  # Default backend for other platforms
 
     def start(self, tracker: PerformanceTracker) -> bool:
         """Initialize camera and start capture thread."""
